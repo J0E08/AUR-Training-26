@@ -1,88 +1,94 @@
-def show(dict):
-    for idx, (item, qty) in enumerate(dict.items(), 1):
-        print(f"{idx}. {item}: {qty}")
-
-def lstock():
-    dict = {}
-    try:
-        with open("stock.txt", "r") as file:
-            for line in file:
-                parts = line.split(",")
-                item = parts[0].strip().lower()
-                qty = int(parts[1].strip())
-                dict[item] = qty
-    except (OSError, ValueError, IndexError):
-        print("Error: stock.txt missing or corrupted")
-    return dict
-
-def getkey(dict, val):
-    keys = list(dict.keys())
-    if val.isdigit():
-        idx = int(val) - 1
-        if 0 <= idx < len(keys):
-            return keys[idx]
-    return val
-
-def action(choice, dict):
-    if choice == "1":
-        show(dict)
-        inp = input('Enter stock name or id: ').strip().lower()
-        key = getkey(dict, inp)
-        try:
-            amt = int(input(f"Enter amount to add to {key}: "))
-            if amt < 0:
-                print("Error: amount cannot be negative")
-                return
-        except ValueError:
-            print("Invalid amount")
-            return
-        if key in dict:
-            dict[key] += amt
-        else:
-            dict[key] = amt
-    elif choice == "2":
-        show(dict)
-        inp = input('Enter stock name or id: ').strip().lower()
-        keys = list(dict.keys())
-        key = None
-        if inp.isdigit():
-            idx = int(inp) - 1
-            if 0 <= idx < len(keys):
-                key = keys[idx]
-        elif inp in dict:
-            key = inp
-        if not key or key not in dict:
-            print("Invalid stock item, pls try again")
-            return
-        try:
-            amt = int(input(f"Enter amount to remove from {key}: "))
-            if amt < 0:
-                print("Error: amount cannot be negative")
-                return
-        except ValueError:
-            print("Invalid amount")
-            return
-        if dict[key] - amt < 0:
-            print("Error: Remaining stock cannot be less than 0")
-        elif dict[key] - amt == 0:
-            del dict[key]
-        else:
-            dict[key] -= amt
-    elif choice == "3":
-        show(dict)
-    elif choice == "4":
-        with open("stock.txt", "w") as file:
-            for item, qty in dict.items():
-                file.write(f"{item},{qty}\n")
-        print("Changes saved to stock.txt")
-
-dict = lstock()
-
-while True:
-    choice = input("pls enter numbers 1 through 4\n1 : ADD STOCK\n2 : REMOVE STOCK\n3 : SHOW CONTENTS\n4 : EXIT\n").strip()
-    if choice in ["1", "2", "3", "4"]:
-        action(choice, dict)
-        if choice == "4":
-            break
+stock = {}
+num = 0
+try:
+    with open("stock.txt", "r") as f:
+        for line in f:
+            if line.strip():
+                item, quantity = line.strip().split(",")
+                stock[item.strip().lower()] = int(quantity.strip())
+except (FileNotFoundError, ValueError):
+    print("Warning: stock.txt not found or corrupted.")
+act = {
+    "1" : "Add stock",
+    "2" : "Remove stock",
+    "3" : "Display stock",
+    "4" : "Exit"
+    }
+def get_item_list():
+    return list(stock.keys())
+def show_stock():
+    item_list = get_item_list()
+    for idx, name in enumerate(item_list, start=1):
+        print(f"{idx}. {name}: {stock[name]}")
+def show_actions():
+    for key, value in act.items():
+        print(f"{key}. {value}")
+def check_key(user_input):
+    item_list = get_item_list()
+    if user_input.isdigit():
+        idx = int(user_input) - 1
+        if 0 <= idx < len(item_list):
+            return item_list[idx]
     else:
-        print("Invalid choice, pls select 1, 2, 3, or 4")
+        cleaned = user_input.lower().strip()
+        if cleaned in stock:
+            return cleaned
+    return None
+def actions(num):
+    while True:
+        while True:
+            show_actions()
+            num = int(input("pls enter a number respective to action required\n"))
+            if(num>0 and num<5):
+                break
+        if num == 1:
+            while True:
+                show_stock()
+                item = input("pls enter the item's name\n").lower().strip()
+                quantity = int(input(f"pls enter the quantity of the stock --> {item}\n"))
+                if item.isdigit():
+                    idx = int(item) - 1
+                    item_list = get_item_list()
+                    if 0 <= idx < len(item_list):
+                        real_key = item_list[idx]
+                        print("item already registered!\nquantity value changed\n")
+                        stock[real_key] += quantity
+                    else:
+                        print("Invalid index!\n")
+                    print(stock)
+                    break
+                if item in stock:
+                    print("item already registered!\nquantity value changed\n")
+                    stock[item] += quantity
+                    print(stock)
+                    break
+                else:
+                    stock[item] = quantity
+                    print(stock) 
+                    break
+            continue
+        if num == 2:
+            show_stock()
+            rmv = input("pls enter ID or name of item u wish to remove\n")
+            key = check_key(rmv)
+            if not key:
+                print("item not found\n")
+                continue
+            qnty = int(input("pls enter the value of quantity u wish to remove\n"))
+            if stock[key] - qnty < 0:
+                while True:
+                    qnty = int(input("quantity value requested for removal is greater than available\npls try again!\n"))
+                    if stock[key] - qnty >= 0:
+                        break
+            stock[key] -= qnty
+            continue
+        if num == 3:
+            show_stock()
+            continue
+        if num == 4:
+            with open("stock.txt", "w") as f:
+                for key, val in stock.items():
+                    f.write(f"{key},{val}\n")
+            print("changes saved!\n")
+            break
+actions(num)
